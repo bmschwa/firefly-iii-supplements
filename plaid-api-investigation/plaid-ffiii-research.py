@@ -1,6 +1,9 @@
 import os
+import datetime
 from collections import defaultdict
+from decimal import Decimal
 
+import pandas as pd
 import yaml
 
 import requests
@@ -39,6 +42,7 @@ discovered_ff_accts = set()
 discovered_plaid_accts = set()
 unique_plaid = defaultdict(list)
 ff_acct_plaid_key_map = {}
+plaid_acct_to_inst = {}
 for acctd in config.get('fireflyPlaidConnector2', {}).get('accounts', []):
     unique_plaid[acctd['plaidItemAccessToken']].append((acctd['fireflyAccountId'], acctd['plaidAccountId']))
     ff_acct_plaid_key_map[acctd['plaidAccountId']] = acctd['plaidItemAccessToken']
@@ -87,6 +91,9 @@ for acctd in config.get('fireflyPlaidConnector2', {}).get('accounts', []):
         print(f"Using access token {acctd['plaidItemAccessToken']}, received data on {', '.join([p['account_id'] for p in acct_get_response['accounts']])}")
         for plaid_acct in acct_get_response['accounts']:
             matched = False
+            plaid_acct_to_inst[plaid_acct.account_id] = (acct_get_response.item.institution_id,
+                                                         acct_get_response.item.institution_name,
+                                                         acct_get_response.item.item_id)
             for ff_acct_id, plaid_acct_id in token_map:
 
                 if plaid_acct['account_id'] == plaid_acct_id and ff_acct_id == acctd['fireflyAccountId']:
@@ -102,6 +109,41 @@ for pid, pacc in tmp_plaid_acct.items():
     print(f"Received information for account {pid} from Plaid; not included in ff?")
 
 # all equeal counts: matched & discovered
-print("matched firefly accounts with plaid accounts")
+if len(plaid_ff_acct_match) != len(discovered_ff_accts) or len(plaid_ff_acct_match) != len(discovered_plaid_accts):
+    print(f"Mismatched Plaid Accounts: {', '.join(set([a.account_id for (a, b) in plaid_ff_acct_match]).symmetric_difference(discovered_plaid_accts))}")
+    print(f"Mismatched Firefly Accounts: {', '.join(map(str, set([int(b['id']) for (a, b) in plaid_ff_acct_match]).symmetric_difference(discovered_ff_accts)))}")
 
+data_pd = []
 
+cents = Decimal("0.01")
+for plaid_acct, ff_acct in plaid_ff_acct_match:
+    plaid_instid, plaid_instname, plaid_itemid = plaid_acct_to_inst[plaid_acct.account_id]
+    data_pd.append(
+        {
+            "ff_id": int(ff_acct['id']),
+            "ff_name": ff_acct['attributes']['name'],
+            "ff_updated_at_dt": datetime.datetime.fromisoformat(ff_acct['attributes']['updated_at']),
+            "ff_last_activity_dt": datetime.datetime.fromisoformat(ff_acct['attributes']['last_activity']),
+            "ff_current_balance_dt": datetime.datetime.fromisoformat(ff_acct['attributes']['current_balance_date']),
+            "ff_current_balance": Decimal(ff_acct['attributes']['current_balance']).quantize(cents),
+            "ff_current_active": ff_acct['attributes']['active'],
+
+            "plaid_id": plaid_acct.account_id,
+            "plaid_name": plaid_acct.name,
+            "plaid_type": plaid_acct.type,
+            "plaid_subtype": plaid_acct.subtype,
+            "plaid_official_name": plaid_acct.official_name,
+            "plaid_current_balance": Decimal(plaid_acct.balances.current).quantize(cents),
+
+            "plaid_institution_name": plaid_instname,
+            "plaid_institution_id": plaid_instid,
+            "plaid_itemid": plaid_itemid,
+        }
+    )
+
+banking_df = pd.DataFrame.from_records(data_pd)
+banking_df.to_pickle("sensitive_banking_pickle")
+
+# https://stackoverflow.com/a/30691921
+with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+    print(banking_df)
