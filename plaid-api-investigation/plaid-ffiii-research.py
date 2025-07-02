@@ -37,6 +37,29 @@ plaid_conf = plaid.Configuration(
 plaid_api_client = plaid.ApiClient(plaid_conf)
 plaid_client = plaid_api.PlaidApi(plaid_api_client)
 
+
+# Lets get info about what connections we have connected (this could be for multiple users)
+
+# TODO!
+revoke_these = []
+from plaid.model.item_access_token_invalidate_request import ItemAccessTokenInvalidateRequest
+from plaid.model.item_remove_request import ItemRemoveRequest
+for r in revoke_these:
+    iati = ItemAccessTokenInvalidateRequest(r)
+
+    # Retrieves a new one
+    #rr = plaid_client.item_access_token_invalidate(iati)
+    #print(f"Invalidated: {rr}")
+
+    irr = ItemRemoveRequest(access_token=r)
+    try:
+        rr = plaid_client.item_remove(irr)
+    except(plaid.exceptions.ApiException):
+        print("Could not remove... probably wasn't there...")
+    else:
+        print(f"Removed: {rr}")
+
+
 # Sort for unique creds from plai :)
 discovered_ff_accts = set()
 discovered_plaid_accts = set()
@@ -142,7 +165,7 @@ for plaid_acct, ff_acct in plaid_ff_acct_match:
     )
 
 banking_df = pd.DataFrame.from_records(data_pd)
-banking_df.to_pickle("sensitive_banking_pickle")
+banking_df.to_csv("sensitive_banking.csv")
 
 # https://stackoverflow.com/a/30691921
 with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also

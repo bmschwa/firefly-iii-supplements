@@ -14,7 +14,7 @@ https://plaid.com/docs/api/products/liabilities/#liabilitiesget
 
 
 https://plaid.com/docs/api/institutions/#institutionsget_by_id
-https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_pickle.html
+
 
 Pandas:
 
