@@ -40,10 +40,11 @@ plaid_client = plaid_api.PlaidApi(plaid_api_client)
 
 # Lets get info about what connections we have connected (this could be for multiple users)
 
-# TODO!
+
 revoke_these = []
 from plaid.model.item_access_token_invalidate_request import ItemAccessTokenInvalidateRequest
 from plaid.model.item_remove_request import ItemRemoveRequest
+
 for r in revoke_these:
     iati = ItemAccessTokenInvalidateRequest(r)
 
