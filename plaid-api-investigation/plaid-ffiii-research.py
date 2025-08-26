@@ -42,7 +42,7 @@ plaid_client = plaid_api.PlaidApi(plaid_api_client)
 # Lets get info about what connections we have connected (this could be for multiple users)
 
 
-revoke_these = ["access-production-891102ad-7a44-4c93-999f-c70f5b34f6f3", "access-production-c5ceb062-7c49-42a6-a7db-dd61d4fe2ac6"]
+revoke_these = []
 from plaid.model.item_access_token_invalidate_request import ItemAccessTokenInvalidateRequest
 from plaid.model.item_remove_request import ItemRemoveRequest
 
