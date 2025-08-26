@@ -13,6 +13,7 @@ cursor_file = os.environ.get("FF_III_CONNECTOR_2_CURSOR")
 
 import plaid
 from plaid.api import plaid_api
+from plaid.exceptions import ApiException
 from plaid.model.accounts_get_request import AccountsGetRequest
 
 with open(config_file) as stream:
@@ -41,7 +42,7 @@ plaid_client = plaid_api.PlaidApi(plaid_api_client)
 # Lets get info about what connections we have connected (this could be for multiple users)
 
 
-revoke_these = []
+revoke_these = ["access-production-891102ad-7a44-4c93-999f-c70f5b34f6f3", "access-production-c5ceb062-7c49-42a6-a7db-dd61d4fe2ac6"]
 from plaid.model.item_access_token_invalidate_request import ItemAccessTokenInvalidateRequest
 from plaid.model.item_remove_request import ItemRemoveRequest
 
@@ -76,6 +77,25 @@ for acctd in config.get('fireflyPlaidConnector2', {}).get('accounts', []):
         discovered_plaid_accts.add(acctd['plaidAccountId'])
 
 print(f"{len(unique_plaid)} Sets of plaid creds")
+
+########################################################################################################################
+#
+# lets just see what the state of our access tokens is like,.
+#
+#
+from plaid.model.auth_get_request import AuthGetRequest
+for t in unique_plaid.keys():
+    try:
+        auth_response = plaid_client.auth_get( AuthGetRequest(access_token=t) )
+    except ApiException as e:
+        print(f"FAILED ON {t}: {e}")
+    else:
+        print(auth_response)
+
+
+##############################
+
+
 
 firefly_iii_url = config.get('fireflyPlaidConnector2', {}).get('firefly').get('url')
 firefly_iii_pat = config.get('fireflyPlaidConnector2', {}).get('firefly').get('personalAccessToken')
